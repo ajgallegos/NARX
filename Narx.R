@@ -345,3 +345,23 @@ CopyNode <- R6Class(classname = "CopyNode", inherit = Node, public = list(
     invisible(self)
   }
 ))
+
+
+## Create BiasNode
+BiasNode <- R6Class(classname = "BiasNode", inherit = ProtoNode, public = list(
+  initialize = function(){
+    ## initialize constants for use
+    bias <- ProtoNode$new()
+    bias$node_type <- NODE_BIAS
+    self$activated_ <- bias$value_
+  },
+  ## always returns activation which is 1
+  activate = function(value = NULL){
+    return(1.0)
+  },
+  ## Also returns 1 since activation of bias node is always 1
+  error_func = function(value = 1.0){
+    value = 1.0
+    value
+  }
+))
