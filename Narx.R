@@ -365,3 +365,78 @@ BiasNode <- R6Class(classname = "BiasNode", inherit = ProtoNode, public = list(
     value
   }
 ))
+
+
+## Create connection class
+Connection <- R6Class(classname = "Connection", public = list(
+  initialize = function(lower_node, upper_node, weight = 0){
+    ## Initialize all necessary constants
+    self$lower_node <- lower_node
+    self$upper_node <- upper_node
+    self$weight_ <- NULL
+    self$set_weight(weight)
+  },
+  ## This function sets the weight of the connection, which relates to
+  ## the impact that a lower node's activation will have on an upper node's
+  ## value.
+  set_weight = function(weight){
+    if(!is.numeric(weight)){
+      throw("Weight type is not numeric.")
+    }
+    else{
+      self$weight_ <- weight
+    }
+    invisible(self)
+  },
+  ## This function adds to the weight of the connection, which is
+  ## proportional to the impact that a lower node's activation will
+  ## have on an upper node's value.
+  add_weight = function(weight){
+    if(!is.numeric(weight)){
+      throw("Weight type is not numeric.")
+    }
+    else{
+      self$weight_ = self$weight_ + weight
+    }
+  },
+  ## This function sets the weight of the connection, which is relates to
+  ## the impact that a lower node's activation will have on an upper node's
+  ## value.
+  get_weight = function(){
+    self$weight_
+  }
+))
+
+## math functions and derivatives
+
+## calculate the sigmoid
+sigmoid <- function(value){
+  sig <- (1 / (1 + exp(-value)))
+  sig
+}
+
+## calculate the derivative of the sigmoid
+sigmoid_derivative <- function(value){
+  value * (1 - value)
+}
+
+## calculate the tanh
+tanh <- function(value){
+  tanh(value)
+}
+
+## calcualte the derivative of the tanh
+tanh_derivative <- function(value){
+  1 - (tanh(value)^2)
+}
+
+## returns the value given to it
+linear <- function(value){
+  value
+}
+
+## returns 1
+linear_derivative <- function(value){
+  value <- 1
+  value
+}
