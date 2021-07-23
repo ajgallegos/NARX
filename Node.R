@@ -16,6 +16,40 @@ NODE_INPUT <- 'input'
 NODE_COPY <- 'copy'
 NODE_BIAS <- 'bias'
 
+## math functions and derivatives
+## calculate the sigmoid
+sigmoid <- function(value) {
+  sig <- (1 / (1 + exp(-value)))
+  sig
+}
+
+## calculate the derivative of the sigmoid
+sigmoid_derivative <- function(value) {
+  value * (1 - value)
+}
+
+## calculate the tanh
+tanh <- function(value) {
+  tanh(value)
+}
+
+## calcualte the derivative of the tanh
+tanh_derivative <- function(value) {
+  1 - (tanh(value) ^ 2)
+}
+
+## returns the value given to it
+linear <- function(value) {
+  value
+}
+
+## returns 1
+linear_derivative <- function(value) {
+  value <- 1
+  value
+}
+
+
 ## Prototype node class
 ProtoNode <- R6Class(
   classname = "ProtoNode",
@@ -125,13 +159,13 @@ Node <- R6Class(
     set_activation_type = function(activation_type) {
       ## Check this one this may be wrong
       if (activation_type == ACTIVATION_SIGMOID) {
-        node$activate_ = "sigmoid"
+        node$activate_ = sigmoid
       }
       else if (activation_type == ACTIVATION_TANH) {
-        node$activate_ = "tanh"
+        node$activate_ = tanh
       }
       else if (activation_type == ACTIVATION_LINEAR) {
-        node$activate_ = "linear"
+        node$activate_ = linear
       }
       else{
         throw("Invalid Activation Type.")
@@ -144,13 +178,13 @@ Node <- R6Class(
     ## Sets error function type to be used
     set_error_func_ = function(activation_type) {
       if (activation_type == ACTIVATION_SIGMOID) {
-        node$error_func_ = "sigmoid_derivative"
+        node$error_func_ = sigmoid_derivative
       }
       else if (activation_type == ACTIVATION_TANH) {
-        node$error_func_ = "tanh_derivative"
+        node$error_func_ = tanh_derivative
       }
       else if (activation_type == ACTIVATION_LINEAR) {
-        node$error_func_ = "linear_derivative"
+        node$error_func_ = linear_derivative
       }
       else{
         throw("Invalid Activation Type.")
@@ -390,37 +424,3 @@ Connection <- R6Class(
     }
   )
 )
-
-## math functions and derivatives
-
-## calculate the sigmoid
-sigmoid <- function(value) {
-  sig <- (1 / (1 + exp(-value)))
-  sig
-}
-
-## calculate the derivative of the sigmoid
-sigmoid_derivative <- function(value) {
-  value * (1 - value)
-}
-
-## calculate the tanh
-tanh <- function(value) {
-  tanh(value)
-}
-
-## calcualte the derivative of the tanh
-tanh_derivative <- function(value) {
-  1 - (tanh(value) ^ 2)
-}
-
-## returns the value given to it
-linear <- function(value) {
-  value
-}
-
-## returns 1
-linear_derivative <- function(value) {
-  value <- 1
-  value
-}
