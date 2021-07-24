@@ -40,7 +40,7 @@ Layer <- R6Class(
     },
     ## This function returns the total nodes.  It can also return the total
     ## nodes of a particular type, such as 'copy'.
-    total_nodes <- function(node_type = NULL) {
+    total_nodes = function(node_type = NULL) {
       count <- 0
       if (!is.null(node_type)) {
         for (node in self$nodes) {
@@ -78,7 +78,7 @@ Layer <- R6Class(
       val_list
     },
     ## This function returns the activation values for each node as a vector
-    activations = function{
+    activations = function() {
       act_list <- numeric(self$nodes)
       for (node in self$nodes) {
         act_list[index] <- node$activate()
@@ -208,7 +208,7 @@ Layer <- R6Class(
     ## This takes a list of targets that applied sequentially to
     ## each node in the output_layer
     load_targets = function(targets) {
-      if (self$layer_type 1 = LAYER_TYPE_OUTPUT) {
+      if (self$layer_type  != LAYER_TYPE_OUTPUT) {
         throw("Target values are only loaded to output layer.")
       }
       
