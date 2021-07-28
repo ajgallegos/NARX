@@ -470,11 +470,6 @@ NeuralNet <- R6Class(classname = "NeuralNet", list(
       }
     }
   
-  parseInputfileLayer = function(config, layerNo){
-    layerId <- paste("layer ", layerNo)
-    ## See what Alex thinks about reading in files
-  }
-  
   outputValues = function(){
     output <- paste("[net]\n", "input_neurons = ", self$inputLayer$total_nodes(NODE_INPUT), "\n hidden_neurons = ")
     ## MISSING a couple of lines
