@@ -223,7 +223,7 @@ Node <- R6Class(
     ## node.
     add_input_connection = function(conn) {
       if (conn$upper_node == conn) {
-        append(node$input_connections, conn)
+        node$input_connections <- append(node$input_connections, conn)
       }
       else{
         throw("The upper node is always the current node.")

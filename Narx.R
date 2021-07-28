@@ -412,7 +412,7 @@ NeuralNet <- R6Class(classname = "NeuralNet", list(
         if (showEpochResults) {
           print(paste("epoch: ", epoch, " MSE: ", mse))
         }
-        self$accumeMse$append(mse)
+        self$accumeMse <- append(self$accumeMse, mse)
       }
     },
     

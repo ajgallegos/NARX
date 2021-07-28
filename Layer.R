@@ -133,7 +133,7 @@ Layer <- R6Class(
         }
       }
       
-      append(self$nodes, node)
+      self$nodes <- append(self$nodes, node)
       invisible(self)
     },
     ## This function returns the node associated with the node_no.
@@ -156,13 +156,13 @@ Layer <- R6Class(
       node_list <- list()
       if (is.null(node_type)) {
         for (node in self$nodes) {
-          append(node_list, node)
+          node_list <- append(node_list, node)
         }
       }
       else {
         for (node in self$nodes) {
           if (node$node_type == node_type) {
-            append(node_list, node)
+            node_list <- append(node_list, node)
           }
         }
       }
