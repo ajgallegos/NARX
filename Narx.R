@@ -1,5 +1,6 @@
 library(R6)
 library(R.oo)
+
 library(iterators)
 
 Recurrent <- R6Class(classname = "Recurrent", list(
@@ -530,5 +531,4 @@ NeuralNet <- R6Class(classname = "NeuralNet", list(
   }
   )
 ))
-
 

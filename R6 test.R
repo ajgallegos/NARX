@@ -35,6 +35,7 @@ Ann$greet()
 ## Set Ann's new hair value and have her greet again
 Ann$set_hair("red")
 Ann$hair
+Ann$greet()
 
 ## note: this also works but only for publics and in general should add functions to update values
 Ann$hair <- "black"
