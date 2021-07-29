@@ -54,9 +54,18 @@ linear_derivative <- function(value) {
 ProtoNode <- R6Class(
   classname = "ProtoNode",
   public = list(
+    ## Initializes variables to be initialized
+    node_no = NULL,
+    node_type = NULL,
+    value_ = NULL,
+    input_connections = NULL,
+    activation_type_ = NULL,
+    error = NULL,
+    target = NULL,
+    activate_ = NULL,
     ## initializes the prototype node with default values
-    initialize = function() {
-      ## Initializes values that will be reset in actual node class
+    ## Initializes values that will be reset in actual node class
+    initialize = function(){
       self$node_no <- NULL
       self$node_type <- NULL
       self$value_ <- 0.0
@@ -64,24 +73,71 @@ ProtoNode <- R6Class(
       self$activation_type_ <- NULL
       self$error <- 0.0
       self$target <- NULL
+      self$activate_ <- NULL
     },
-    ## stub function
-    activate_ = function(value) {
+    
+    ## linear activation
+    activate_l = function(value) {
       value
       invisible(self)
     },
-    ## stub function
-    error_func_ = function(value) {
-      value
-      invisible(self)
+    
+    ## sigmoid activation
+    activate_s = function(value) {
+      sig <- (1 / (1 + exp(-value)))
+      sig
+    },
+    
+    ## tanh activation
+    activate_t = function(value) {
+      val <- tanh(value)
+      val
+    },
+    
+    ## linear derivative
+    error_func_l = function(value) {
+      val <- 1
+      val
+    },
+    
+    ## tanh derivative
+    error_func_t = function(value){
+      val <- 1 - (tanh(value) ^ 2)
+      val
+    },
+    
+    ## sig derivative
+    error_func_s = function(value){
+      val <- value * (1 - value)
+      val
     },
     ## Applies activation function to value of the node
-    activate = function() {
-      self$activate_(self$value_)
+    activate = function(node) {
+      if(node$activate_ == 'sigmoid') {
+        return(node$activate_s(node$value_))
+      }
+      else if(node$activate_ == 'tanh') {
+        return(node$activate_t(node$value_))
+      }
+      else if(node$activate_ == 'linear') {
+        return(node$activate_l(node$value_))
+      }
+      else {
+        throw("Error, wrong value supplied")
+      }
       invisible(self)
     },
     ## Computes the error function
     error_func = function(value) {
+      if(node$error_funct_ == 'linear-derivative'){
+        return(self$error_func_l(value))
+      }
+      else if(node$error_funct_ == 'tanh-derivative'){
+        return(self$error_func_t(value))
+      }
+      else if(node$error_funct_ == 'sigmoid-derivative'){
+        return(self$error_func_s(value))
+      }
       self$error_func_(value)
       invisible(self)
     },
@@ -99,6 +155,11 @@ ProtoNode <- R6Class(
         conn.set_weight(self$rand_weight(random_con))
       }
       invisible(self)
+    },
+    
+    ## Get the activation type
+    get_activation_type = function(){
+      return(self$activation_type_)
     },
     ## This function updates the error of the node from upstream errors.
     ## Depending upon halting on extremes, it also may adjust or halt if
@@ -145,46 +206,50 @@ Node <- R6Class(
   classname = "Node",
   inherit = ProtoNode,
   public = list(
-    ## initialize the node with inheritance from protonode
+    ## initialize variable to be assigned
+    node = NULL,
+    error_funct_ = NULL,
+    
+    ## assign the node with inheritance from protonode
     initialize = function(node_type = NULL) {
       node <- ProtoNode$new()
       node$node_type <- node_type
-      node$error_func_ <- NULL
+      self$error_funct_ <- NULL
     },
     ## This function sets the activation type for the node.  Currently
     ## available values are ACTIVATION_SIGMOID, ACTIVATION_TANH,
     ## ACTIVATION_LINEAR. When specifying the activation type, the
     ## corresponding derivative type for the error functions are assigned as
     ## well.
-    set_activation_type = function(activation_type) {
+    set_activation_type = function(node, this_activation_type) {
       ## Check this one this may be wrong
-      if (activation_type == ACTIVATION_SIGMOID) {
-        node$activate_ = sigmoid
+      if (this_activation_type == ACTIVATION_SIGMOID) {
+        node$activate_ <- 'sigmoid'
       }
-      else if (activation_type == ACTIVATION_TANH) {
-        node$activate_ = tanh
+      else if (this_activation_type == ACTIVATION_TANH) {
+        node$activate_ <- 'tanh'
       }
-      else if (activation_type == ACTIVATION_LINEAR) {
-        node$activate_ = linear
+      else if (this_activation_type == ACTIVATION_LINEAR) {
+        node$activate_ <- 'linear'
       }
       else{
         throw("Invalid Activation Type.")
       }
       
-      self$set_error_func_(activation_type)
-      node$activation_type_ <- activation_type
+      self$set_error_func_(node, this_activation_type)
+      node$activation_type_ <- this_activation_type
       invisible(self)
     },
     ## Sets error function type to be used
-    set_error_func_ = function(activation_type) {
+    set_error_func_ = function(node, activation_type) {
       if (activation_type == ACTIVATION_SIGMOID) {
-        node$error_func_ = sigmoid_derivative
+        node$error_funct_ = 'sigmoid_derivative'
       }
       else if (activation_type == ACTIVATION_TANH) {
-        node$error_func_ = tanh_derivative
+        node$error_funct_ = 'tanh_derivative'
       }
       else if (activation_type == ACTIVATION_LINEAR) {
-        node$error_func_ = linear_derivative
+        node$error_funct_ = 'linear_derivative'
       }
       else{
         throw("Invalid Activation Type.")
@@ -266,7 +331,14 @@ CopyNode <-
     inherit = Node,
     public = list(
       ## initialize all necessary class variables
-      initialize = function() {
+      copy = NULL,
+      source_node_ = NULL,
+      source_type_ = NULL,
+      incoming_weight_ = NULL,
+      existing_weight_ = NULL,
+
+      ## assign variables
+      initialize = function(){
         copy <- Node$new()
         copy$node_type <- NODE_COPY
         self$source_node_ <- NULL
@@ -275,6 +347,7 @@ CopyNode <-
         self$existing_weight_ <- 0
         copy$set_activation_type(ACTIVATION_LINEAR)
       },
+      
       set_source_node = function(node) {
         ## Sets the source of previous recurrent values
         self$source_node_ = node
@@ -361,14 +434,21 @@ CopyNode <-
 BiasNode <-
   R6Class(
     classname = "BiasNode",
-    inherit = ProtoNode,
+    inherit = Node,
     public = list(
-      initialize = function() {
-        ## initialize constants for use
+      ## initialize constants for use
+      bias = NULL,
+      activated_ = NULL,
+      node_type = NULL,
+      
+      ## assign variables
+      initialize = function(){
         bias <- ProtoNode$new()
         bias$node_type <- NODE_BIAS
         self$activated_ <- bias$value_
+        self$node_type <- NODE_BIAS
       },
+      
       ## always returns activation which is 1
       activate = function(value = NULL) {
         return(1.0)
@@ -386,8 +466,13 @@ BiasNode <-
 Connection <- R6Class(
   classname = "Connection",
   public = list(
+    ##initialze all constants
+    lower_node = NULL,
+    upper_node = NULL,
+    weight_ = NULL,
+    
     initialize = function(lower_node, upper_node, weight = 0) {
-      ## Initialize all necessary constants
+      ## assign all necessary constants
       self$lower_node <- lower_node
       self$upper_node <- upper_node
       self$weight_ <- NULL

@@ -6,15 +6,24 @@ library(iterators)
 Recurrent <- R6Class(classname = "Recurrent", list(
   public = list(
     ## Create initializion class for necessary variables
-    initialize = function() {
-      sourceType = "a"
-      activationType = ACTIVATION_LINEAR
-      incomingWeight <- 1
-      existing_weight <- 0
-      connectionType <- "m"
-      copyLevels <- 1
-      copyNodesLayer <- 0
-      connectNodesLayer <- 1
+    sourceType = NULL,
+    activationType = NULL,
+    incomingWeight = NULL,
+    existing_weight = NULL,
+    connectionType = NULL,
+    copyLevels = NULL,
+    copyNodesLayer = NULL,
+    connectNodesLayer = NULL,
+    
+    initialize = function(){
+      self$sourceType <- "a"
+      self$activationType <- ACTIVATION_LINEAR
+      self$incomingWeight <- 1
+      self$existing_weight <- 0
+      self$connectionType <- "m"
+      self$copyLevels <- 1
+      self$copyNodesLayer <- 0
+      self$connectNodesLayer <- 1
     },
     
     applyConfig = function(neural_net) {
@@ -66,14 +75,33 @@ Recurrent <- R6Class(classname = "Recurrent", list(
         }
       }
       return(retval)
-    },
+    }
   )
 ))
 
-NeuralNet <- R6Class(classname = "NeuralNet", list(
+NeuralNet <- R6Class(classname = "NeuralNet", 
   ## Declare fields
   ## Start all as private, maybe move to public later
   public = list(
+    ##initialize variables
+    isNeuralNet = NULL,
+    learnrate = NULL,
+    randomConstraint = NULL,
+    epochs = NULL,
+    layers = NULL,
+    dataRange = NULL,
+    allInputs = NULL,
+    allTargets = NULL,
+    timeDelay = NULL,
+    allResults = NULL,
+    mse = NULL,
+    mseAccum = NULL,
+    validationTargetsActivations = NULL,
+    testTargetsActivations = NULL,
+    haltOnExtremes = NULL,
+    inputLayer = NULL,
+    outputLayer = NULL,
+    
     ## Initialize the NeuralNet
     initialize = function() {
       self$isNeuralNet <- TRUE
@@ -100,44 +128,50 @@ NeuralNet <- R6Class(classname = "NeuralNet", list(
       
       # holds accumulated mse for each epoch tested
       self$mseAccum <- numeric()
-      validationTargetsActivations <- numeric()
-      testTargetsActivations <- numeric()
+      self$validationTargetsActivations <- numeric()
+      self$testTargetsActivations <- numeric()
       
-      haltOnExtremes <- FALSE
+      self$haltOnExtremes <- FALSE
       
-      inputLayer <- NULL
-      outputLayer <- NULL
+      self$inputLayer <- NULL
+      self$outputLayer <- NULL
     },
     
     init_layers = function(inputNodes,
                            totalHiddenNodesList,
                            outputNodes,
-                           recurrentMods) {
+                           recurrentMods = NULL) {
       ## Input layer
-      self$layers = numeric()
+      self$layers <- numeric()
       layer <- Layer$new(length(self$layers), NODE_INPUT)
-      layer$addNodes(inputNodes, NODE_INPUT)
-      layer$addNode(BiasNode())
+      layer$add_nodes(inputNodes, NODE_INPUT)
+      bias.node <- BiasNode$new()
+      layer$add_node(bias.node)
       self$layers <- append(self$layers, layer)
       self$inputLayer <- layer
-      
+
       ## Hidden layer
       for (hiddenNode in totalHiddenNodesList) {
         layer <- Layer$new(length(self$layers), NODE_HIDDEN)
-        self$layers$addNodes(hid, NODE_HIDDEN)
-        self$layers$addNode(BiasNode())
+        layer$add_nodes(hiddenNode, NODE_HIDDEN)
+        bias.node <- BiasNode$new()
+        layer$add_node(bias.node)
         self$layers <- append(self$layers, layer)
       }
       
       ## Output layer
-      self$layers <- Layer(length(self$layers), NODE_OUTPUT)
+      layer <- Layer$new(length(self$layers), NODE_OUTPUT)
       layer$add_nodes(outputNodes, NODE_OUTPUT)
-      self$layers <- append(self$layers, layer)
-      output_layer <- layer
-      self$initconnections()
       
-      for (recurrentMod in recurrentMods) {
-        recurrentMod$apply_config() ## When we get to recurrent class
+      self$layers <- append(self$layers, layer)
+      self$outputLayer <- layer
+      
+      self$initConnections()
+      
+      if(!is.null(recurrentMods)){
+        for (recurrentMod in recurrentMods) {
+          recurrentMod$apply_config()
+        }
       }
     },
     
@@ -354,17 +388,17 @@ NeuralNet <- R6Class(classname = "NeuralNet", list(
       return(self$dataRange["Test"])
     },
     
-    initConnections = function(self) {
+    initConnections = function() {
       for (layer in self$layers[2:length(self$layers)]) {
         self$connectLayer(layer)
       }
     },
     
     connectLayer = function(layer) {
-      lowerLayerNo <- layer.layer_no
-      if (lowerLayer >= 1) {
+      lowerLayerNo <- layer$layer_no
+      if (lowerLayerNo >= 1) {
         lowerLayer <- self$layers[lowerLayerNo]
-        layer$connectLayer(lowerLayer)
+        layer$connect_layer(lowerLayer)
       }
     },
     
@@ -619,4 +653,4 @@ NeuralNet <- R6Class(classname = "NeuralNet", list(
       sink()
     }
   )
-))
+)

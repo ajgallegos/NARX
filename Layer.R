@@ -11,6 +11,13 @@ LAYER_TYPE_OUTPUT <- 'output'
 Layer <- R6Class(
   classname = "Layer",
   public = list(
+    ## Initialize variable to be assigned
+    nodes = NULL,
+    layer_no = NULL,
+    layer_type = NULL,
+    default_activation_type = NULL,
+    
+    ## assign variables
     initialize = function(layer_no, layer_type) {
       self$nodes <- list()
       self$layer_no <- layer_no
@@ -27,13 +34,13 @@ Layer <- R6Class(
       }
       
       if (self$layer_type == LAYER_TYPE_INPUT) {
-        self$default_activation_type <- linear
+        self$default_activation_type <- "linear"
       }
       else if (self$layer_type == LAYER_TYPE_OUTPUT) {
-        self$default_activation_type <- linear
+        self$default_activation_type <- "linear"
       }
       else {
-        self$default_activation_type <- sigmoid
+        self$default_activation_type <- "sigmoid"
       }
       
       self$set_activation_type(self$default_activation_type)
@@ -117,22 +124,19 @@ Layer <- R6Class(
         if (!is.null(activation_type)) {
           node$set_activation_type(activation_type)
         }
-        
         self$add_node(node)
         count <- count  + 1
       }
+      invisible(self)
     },
     ## This function adds a node that has already been formed.  Since it can
     ## originate outside of the initialization process, the activation type is
     ## assumed to be set appropriately already.
     add_node = function(node) {
       node$node_no <- self$total_nodes()
-      if (node$node_type != 'bias') {
-        if (!is.null(node$get_activation_type())) {
-          node$set_activation_type(self$default_activation_type)
-        }
+      if (toString(node$node_type) != 'bias' || is.null(node$get_activation_type())) {
+        node$set_activation_type(node, self$default_activation_type)
       }
-      
       self$nodes <- append(self$nodes, node)
       invisible(self)
     },
@@ -175,7 +179,7 @@ Layer <- R6Class(
     ## for its value and activation.
     connect_layer = function(lower_layer) {
       for (node in self$nodes) {
-        if (node$node_type != 'bias') {
+        if (toString(node$node_type) != 'bias') {
           for (lower_node in lower_layer$nodes) {
             conn <- Connection(lower_node, node)
             node$add_input_connection(conn)
