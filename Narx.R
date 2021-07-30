@@ -142,7 +142,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
                            outputNodes,
                            recurrentMods = NULL) {
       ## Input layer
-      self$layers <- numeric()
+      self$layers <- list()
       layer <- Layer$new(length(self$layers), NODE_INPUT)
       layer$add_nodes(inputNodes, NODE_INPUT)
       bias.node <- BiasNode$new()
@@ -175,7 +175,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    setHaltOnExtremes = function(halt) {
+    set_halt_on_extremes = function(halt) {
       if (!(is(halt, "logical"))) {
         throw("Halt must be a True or False, Halt: ", halt)
       }
@@ -184,11 +184,11 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    getHaltOnExtremes = function() {
+    get_halt_on_extremes = function() {
       return(self$haltOnExtremes)
     },
     
-    setRandomConstraint = function(constraint) {
+    set_random_constraint = function(constraint) {
       if (!(is(constraint, "numeric")) | !between(constraint, 0, 1)) {
         throw("The constraint must be a float between 0.0 and 1.0, constraint: ",
               constraint)
@@ -198,11 +198,11 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    getRandomConstraint = function() {
+    get_random_constraint = function() {
       return(self$randomConstraint)
     },
     
-    setEpochs = function(epochs) {
+    set_epochs = function(epochs) {
       if (!(is(epochs, "numeric")) | (epochs <= 0)) {
         throw("The epochs must be an numeric, epochs: ", epochs)
       }
@@ -211,11 +211,11 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    getEpochs = function() {
+    get_epochs = function() {
       return(self$randomConstraint)
     },
     
-    setTimeDelay = function(timeDelay) {
+    set_time_delay = function(timeDelay) {
       if (!is(timeDelay, "numeric") | timeDelay < 0) {
         throw("Time delay must be an numeric greater than or equal to zero, time delay: ",
               timeDelay)
@@ -225,19 +225,19 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    getTimeDelay = function() {
+    get_time_delay = function() {
       return(self$timeDelay)
     },
     
-    setAllTargets = function(allTargets) {
+    set_all_targets = function(allTargets) {
       self$allTargets <- allTargets
     },
     
-    setAllInputs = function(allInputs) {
+    set_all_inputs = function(allInputs) {
       self$allInputs <- allInputs
     },
     
-    setLearnrate = function(learnrate) {
+    set_learnrate = function(learnrate) {
       if (!is(learnrate, "numeric") | !between(learnrate, 0, 1)) {
         throw("Learnrate must be a numeric between 0.0 and 1.0, learnrate: ",
               learnrate)
@@ -247,21 +247,21 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    getLearnrate = function() {
+    get_learnrate = function() {
       return(self$learnrate)
     },
     
-    setDataRange = function(dataType, startPosition, endPosition) {
+    set_data_range = function(dataType, startPosition, endPosition) {
       if (!(is(startPosition, "numeric")) |
           !(is(endPosition, "numeric"))) {
         throw("start and end position must be an numeric")
       } else {
-        self$dataRange$dataType <- c(startPosition, endPosition)
+        self$dataRange[[dataType]] <- list(startPosition, endPosition)
       }
     },
     
-    setLearnRange = function(startPosition, endPosition) {
-      self$setDataRange(
+    set_learn_range = function(startPosition, endPosition) {
+      self$set_data_range(
         dataType = "Learning",
         startPosition = startPosition,
         endPosition = endPosition
@@ -269,17 +269,17 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       
     },
     
-    getLearnRange = function() {
+    get_learn_range = function() {
       return(self$dataRange["Learning"])
     },
     
-    checkTimeDelay = function(position) {
+    check_time_delay = function(position) {
       if (position - self$timeDelay < 0) {
         throw("Invalid start position with time delayed data")
       }
     },
     
-    getLearnData = function(randomTesting = FALSE) {
+    get_learn_data = function(randomTesting = FALSE) {
       startPosition <- self$dataRange["Learning"][1]
       endPosition <- self$dataRange["Learning"][2]
       yield <- numeric()
@@ -306,7 +306,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    getValidationData = function() {
+    get_validation_data = function() {
       startPosition <- self$dataRange["Validation"][1]
       endPosition <- self$dataRange["Learning"][2]
       self$checkPositions(startPosition, endPosition)
@@ -317,7 +317,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       return(yield)
     },
     
-    getTestData = function() {
+    get_test_data = function() {
       startPosition <- self$dataRange["Test"][1]
       endPosition <- self$dataRange["Learning"][2]
       self$checkPositions(startPosition, endPosition)
@@ -328,7 +328,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       return(yield)
     },
     
-    getData = function(startPosition, endPosition) {
+    get_data = function(startPosition, endPosition) {
       i <- startPosition
       if (endPosition < length(self$allInputs)) {
         throw("endPosition is past end of allInputs, endPosition: ",
@@ -353,13 +353,13 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       return(yield)
     },
     
-    getRandomizedPosition = function(startPosition, endPosition) {
+    get_randomized_position = function(startPosition, endPosition) {
       order = c(startPosition:endPosition)
       randomOrder = sample(order)
       return(randomOrder)
     },
     
-    checkPositions = function(startPosition, endPosition) {
+    check_positions = function(startPosition, endPosition) {
       if (startPosition.isNull) {
         throw("Start Position is not defined")
       }
@@ -372,19 +372,19 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       self$checkTimeDelay(startPosition)
     },
     
-    setValidationRange = function(startPosition, endPosition) {
+    set_validation_range = function(startPosition, endPosition) {
       self$setDataRange("Validation", startPosition, endPosition)
     },
     
-    getValidationRange = function() {
+    get_validation_range = function() {
       return(self$dataRange["Validation"])
     },
     
-    setTestRange = function(startPosition, endPosition) {
-      self$setDataRange("Test", startPosition, endPosition)
+    set_test_range = function(startPosition, endPosition) {
+      self$set_data_range("Test", startPosition, endPosition)
     },
     
-    getTestRange = function() {
+    get_test_range = function() {
       return(self$dataRange["Test"])
     },
     
@@ -395,14 +395,14 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     connectLayer = function(layer) {
-      lowerLayerNo <- layer$layer_no
+      lowerLayerNo <- layer$layer_no 
       if (lowerLayerNo >= 1) {
-        lowerLayer <- self$layers[lowerLayerNo]
-        layer$connect_layer(lowerLayer)
+        lowerLayer <- self$layers[[lowerLayerNo]]
+        layer$connect_layer(lowerLayer, layer)
       }
-    },
+  },
     
-    randomizeNetwork = function() {
+    randomize_network = function() {
       for (layer in self$layers) {
         if (layer$layer_type != NODE_INPUT) {
           layer$randomize(self$randomConstraint)
@@ -492,7 +492,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       return(mse)
     },
     
-    processSample = function(inputs, targets, learn = FALSE) {
+    process_sample = function(inputs, targets, learn = FALSE) {
       self$inputLayer$loadInputs(inputs)
       if (targets) {
         self$outputLayer$loadTargets(targets)
@@ -512,12 +512,12 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    backPropagate = function() {
+    back_propagate = function() {
       self$updateError(toponly = FALSE)
       self$adjustWeights()
     },
     
-    updateError = function(toponly) {
+    update_error = function(toponly) {
       if (toponly == FALSE) {
         self$zeroerrors()
       }
@@ -530,7 +530,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    zeroErrors = function() {
+    zero_errors = function() {
       for (layer in self$layers) {
         for (node in layer$nodes) {
           node$error <- 0
@@ -538,7 +538,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    adjustWeights = function() {
+    adjust_weights = function() {
       loop <- c(1:len(self$layers))
       backLoop <- rev(loop) ## To loop backwards through the layer
       for (layerNo in backLoop) {
@@ -547,7 +547,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    calcSampleError = function() {
+    calc_sample_error = function() {
       total <- 0
       for (node in self$outputLayer$nodes) {
         total <- total + (node$error ** 2)
@@ -555,7 +555,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       return(total)
     },
     
-    copyLevels = function() {
+    copy_levels = function() {
       for (layer in self$layers) {
         loop = c(1:layer$total_nodes())
         backLoop <- rev(loop) ## To loop backwards through the nodes
@@ -569,7 +569,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       }
     },
     
-    outputValues = function() {
+    output_values = function() {
       output <-
         paste(
           "[net]\n",
@@ -642,7 +642,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       return(output)
     },
     
-    nodeId = function(node) {
+    node_id = function(node) {
       return(paste("node-", node$layer$layer_no, ":", node$node_no))
     },
     

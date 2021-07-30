@@ -16,40 +16,6 @@ NODE_INPUT <- 'input'
 NODE_COPY <- 'copy'
 NODE_BIAS <- 'bias'
 
-## math functions and derivatives
-## calculate the sigmoid
-sigmoid <- function(value) {
-  sig <- (1 / (1 + exp(-value)))
-  sig
-}
-
-## calculate the derivative of the sigmoid
-sigmoid_derivative <- function(value) {
-  value * (1 - value)
-}
-
-## calculate the tanh
-tanh <- function(value) {
-  tanh(value)
-}
-
-## calcualte the derivative of the tanh
-tanh_derivative <- function(value) {
-  1 - (tanh(value) ^ 2)
-}
-
-## returns the value given to it
-linear <- function(value) {
-  value
-}
-
-## returns 1
-linear_derivative <- function(value) {
-  value <- 1
-  value
-}
-
-
 ## Prototype node class
 ProtoNode <- R6Class(
   classname = "ProtoNode",
@@ -74,6 +40,15 @@ ProtoNode <- R6Class(
       self$error <- 0.0
       self$target <- NULL
       self$activate_ <- NULL
+    },
+    
+    ## Returns a random weight centered around 0.  The constrain limits
+    ## the value to the maximum that it would return.  For example, if
+    ## .5 is the constraint, then the returned weight would between -.5 and +.5.
+    rand_weight = function(constraint = 1.0) {
+      random <- runif(1) * constraint * 2.0 - constraint
+      return(random)
+      invisible(self)
     },
     
     ## linear activation
@@ -141,18 +116,11 @@ ProtoNode <- R6Class(
       self$error_func_(value)
       invisible(self)
     },
-    ## Returns a random weight centered around 0.  The constrain limits
-    ## the value to the maximum that it would return.  For example, if
-    ## .5 is the constraint, then the returned weight would between -.5 and +.5.
-    rand_weight = function(constraint = 1.0) {
-      runif(1) * constraint * 2.0 - constraint
-      invisible(self)
-    },
     ## This function assigns a random value to the input connections.
     ## The random constraint limits the scope of random variables.
     randomize = function(random_con = RANDOM_CONSTRAINT) {
       for (conn in self$input_connections) {
-        conn.set_weight(self$rand_weight(random_con))
+        conn$set_weight(self$rand_weight(random_con))
       }
       invisible(self)
     },
@@ -209,11 +177,13 @@ Node <- R6Class(
     ## initialize variable to be assigned
     node = NULL,
     error_funct_ = NULL,
+    node_type = NULL,
     
     ## assign the node with inheritance from protonode
     initialize = function(node_type = NULL) {
       node <- ProtoNode$new()
       node$node_type <- node_type
+      self$node_type <- node_type
       self$error_funct_ <- NULL
     },
     ## This function sets the activation type for the node.  Currently
@@ -286,8 +256,8 @@ Node <- R6Class(
     ## The reason that there is a specific function rather than using just an
     ## append is to avoid accidentally adding an input connection to a bias
     ## node.
-    add_input_connection = function(conn) {
-      if (conn$upper_node == conn) {
+    add_input_connection = function(conn, node) {
+      if (identical(conn$upper_node, node)) {
         node$input_connections <- append(node$input_connections, conn)
       }
       else{
@@ -483,7 +453,6 @@ Connection <- R6Class(
     ## value.
     set_weight = function(weight) {
       if (!is.numeric(weight)) {
-        throw("Weight type is not numeric.")
       }
       else{
         self$weight_ <- weight

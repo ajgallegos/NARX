@@ -100,7 +100,7 @@ Layer <- R6Class(
     set_activation_type = function(activation_type) {
       for (node in self$nodes) {
         if (node$node_type != 'bias') {
-          node$set_activation_type(activation_type)
+          node$set_activation_type(node, activation_type)
         }
       }
       invisible(self)
@@ -177,12 +177,12 @@ Layer <- R6Class(
     ## An exception is made for bias nodes. There is no reason to
     ## connect a bias node to a lower layer, since it always produces a 1.0
     ## for its value and activation.
-    connect_layer = function(lower_layer) {
-      for (node in self$nodes) {
+    connect_layer = function(lower_layer, currentLayer) {
+      for (node in currentLayer$nodes) {
         if (toString(node$node_type) != 'bias') {
-          for (lower_node in lower_layer$nodes) {
-            conn <- Connection(lower_node, node)
-            node$add_input_connection(conn)
+          for (lower_node in lower_layer$nodes){
+            conn <- Connection$new(lower_node, node)
+            node$add_input_connection(conn, node)
           }
         }
       }
