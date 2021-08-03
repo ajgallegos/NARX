@@ -194,7 +194,6 @@ Layer <- R6Class(
       if (self$layer_type != LAYER_TYPE_INPUT) {
         throw("Inputs are only entered into the input layer")
       }
-      
       for (i in 1:length(inputs)) {
         node <- self$nodes[[i]]
         if (node$node_type != LAYER_TYPE_INPUT) {
@@ -215,15 +214,13 @@ Layer <- R6Class(
       if (self$layer_type  != LAYER_TYPE_OUTPUT) {
         throw("Target values are only loaded to output layer.")
       }
-      
       if (length(targets) != length(self$nodes)) {
         throw("Number of targets != Number of nodes")
       }
-      
       for (i in 1:length(self$total_nodes())) {
         node <- self$nodes[[i]]
         if (is.numeric(targets[i])) {
-          node$set_values(targets[i])
+          node$set_value(targets[i])
         }
         else {
           throw("Invalid value. Must be Numeric.")
@@ -246,7 +243,7 @@ Layer <- R6Class(
     feed_forward = function() {
       for (node in self$nodes) {
         if (node$node_type != 'bias') {
-          node.feed_forward()
+          node$feed_forward()
         }
       }
       invisible(self)

@@ -53,49 +53,48 @@ ProtoNode <- R6Class(
     
     ## linear activation
     activate_l = function(value) {
-      value
-      invisible(self)
+      return(value)
     },
     
     ## sigmoid activation
     activate_s = function(value) {
       sig <- (1 / (1 + exp(-value)))
-      sig
+      return(sig)
     },
     
     ## tanh activation
     activate_t = function(value) {
       val <- tanh(value)
-      val
+      return(val)
     },
     
     ## linear derivative
     error_func_l = function(value) {
       val <- 1
-      val
+      return(val)
     },
     
     ## tanh derivative
     error_func_t = function(value){
       val <- 1 - (tanh(value) ^ 2)
-      val
+      return(val)
     },
     
     ## sig derivative
     error_func_s = function(value){
       val <- value * (1 - value)
-      val
+      return(val)
     },
     ## Applies activation function to value of the node
-    activate = function(node) {
-      if(node$activate_ == 'sigmoid') {
-        return(node$activate_s(node$value_))
+    activate = function() {
+      if(self$activate_ == 'sigmoid') {
+        return(self$activate_s(self$value_))
       }
-      else if(node$activate_ == 'tanh') {
-        return(node$activate_t(node$value_))
+      else if(self$activate_ == 'tanh') {
+        return(self$activate_t(self$value_))
       }
-      else if(node$activate_ == 'linear') {
-        return(node$activate_l(node$value_))
+      else if(self$activate_ == 'linear') {
+        return(self$activate_l(self$value_))
       }
       else {
         throw("Error, wrong value supplied")
@@ -154,11 +153,11 @@ ProtoNode <- R6Class(
     ## and updates the lower nodes.
     ## The error from the current node is multiplied times the connection
     ## weight, inspected for bounds limits and posted in the lower node's error.
-    update_lower_node_errors_ = function(halt_on_extremes) {
+    update_lower_node_errors_ = function(haltOnExtremes) {
       for (conn in self$input_connections) {
-        conn$lower_node.error <-
-          conn$lower_node$error + conn$get_weight() * self$error
-        if (halt_on_extremes) {
+        conn$lower_node$error <- conn$lower_node$error + conn$get_weight() * self$error
+        
+        if (haltOnExtremes) {
           if (is.nan(conn$lower_node$error)) {
             throw("Number has turned into NaN")
           }
@@ -175,20 +174,18 @@ Node <- R6Class(
   inherit = ProtoNode,
   public = list(
     ## initialize variable to be assigned
-    node = NULL,
     error_funct_ = NULL,
     node_type = NULL,
     
     ## assign the node with inheritance from protonode
     initialize = function(node_type = NULL) {
-      node <- ProtoNode$new()
-      node$node_type <- node_type
+      super$initialize()
       self$node_type <- node_type
       self$error_funct_ <- NULL
     },
     ## This function sets the activation type for the node.  Currently
     ## available values are ACTIVATION_SIGMOID, ACTIVATION_TANH,
-    ## ACTIVATION_LINEAR. When specifying the activation type, the
+    ## ACTIfVATION_LINEAR. When specifying the activation type, the
     ## corresponding derivative type for the error functions are assigned as
     ## well.
     set_activation_type = function(node, this_activation_type) {
@@ -229,20 +226,20 @@ Node <- R6Class(
     ## Set value used to avoid the accidental use of setting a value on a
     ## bias node.  The bias node value is always 1.0.
     set_value = function(value) {
-      node$value_ <- value
+      self$value_ <- value
       invisible(self)
     },
     ## This function returns the internal value of the node.
     get_value = function() {
-      node$value_
+      self$value_
     },
     ## This function walks the input connections, summing gets the lower node
     ## activation values times the connection weight.  Then, node is
     ## activated.
     feed_forward = function() {
       sum1 <- 0
-      for (conn in node$input_connections) {
-        if (is.null(conn$lower_value$get_value)) {
+      for (conn in self$input_connections) {
+        if (is.null(conn$lower_node$get_value)) {
           throw("Uninitialized Node")
         }
         sum1 = sum1 + conn$lower_node$activate() * conn$get_weight()
@@ -269,7 +266,7 @@ Node <- R6Class(
     ## process, taking into account the node error.  The learnrate moderates
     ## the degree of change applied to the weight from the errors.
     adjust_weights = function(learn_rate, halt_on_extremes) {
-      for (conn in node$inputconnections) {
+      for (conn in self$inputconnections) {
         conn$add_weight(self$adjust_weight_(learn_rate,
                                             conn$lower_node$activate(),
                                             node$error))
@@ -301,7 +298,6 @@ CopyNode <-
     inherit = Node,
     public = list(
       ## initialize all necessary class variables
-      copy = NULL,
       source_node_ = NULL,
       source_type_ = NULL,
       incoming_weight_ = NULL,
@@ -309,13 +305,13 @@ CopyNode <-
 
       ## assign variables
       initialize = function(){
-        copy <- Node$new()
-        copy$node_type <- NODE_COPY
+        super$initialize()
+        self$node_type <- NODE_COPY
         self$source_node_ <- NULL
         self$source_type_ <- NULL
         self$incoming_weight_ <- 1
         self$existing_weight_ <- 0
-        copy$set_activation_type(ACTIVATION_LINEAR)
+        self$set_activation_type(ACTIVATION_LINEAR)
       },
       
       set_source_node = function(node) {
@@ -413,9 +409,9 @@ BiasNode <-
       
       ## assign variables
       initialize = function(){
-        bias <- ProtoNode$new()
-        bias$node_type <- NODE_BIAS
-        self$activated_ <- bias$value_
+        super$initialize()
+        self$node_type <- NODE_BIAS
+        self$activated_ <- self$value_
         self$node_type <- NODE_BIAS
       },
       
@@ -474,7 +470,8 @@ Connection <- R6Class(
     ## the impact that a lower node's activation will have on an upper node's
     ## value.
     get_weight = function() {
-      self$weight_
+      weight <- self$weight_
+      return(weight)
     }
   )
 )
