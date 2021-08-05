@@ -84,14 +84,15 @@ Layer <- R6Class(
       }
       val_list
     },
-    ## This function returns the activation values for each node as a vector
+    ## This function returns the activation values for each node as a list
     activations = function() {
-      act_list <- numeric(self$nodes)
+      act_list <- list()
+      index <- 1
       for (node in self$nodes) {
         act_list[index] <- node$activate()
         index = index + 1
       }
-      act_list
+      return(act_list)
     },
     ## This function is a mechanism for setting the activation type
     ## for an entire layer.  If most nodes need to one specific type,
@@ -100,7 +101,7 @@ Layer <- R6Class(
     set_activation_type = function(activation_type) {
       for (node in self$nodes) {
         if (node$node_type != 'bias') {
-          node$set_activation_type(node, activation_type)
+          node$set_activation_type(activation_type)
         }
       }
       invisible(self)
@@ -135,7 +136,7 @@ Layer <- R6Class(
     add_node = function(node) {
       node$node_no <- self$total_nodes()
       if (toString(node$node_type) != 'bias' || is.null(node$get_activation_type())) {
-        node$set_activation_type(node, self$default_activation_type)
+        node$set_activation_type(self$default_activation_type)
       }
       self$nodes <- append(self$nodes, node)
       invisible(self)
@@ -182,7 +183,7 @@ Layer <- R6Class(
         if (toString(node$node_type) != 'bias') {
           for (lower_node in lower_layer$nodes){
             conn <- Connection$new(lower_node, node)
-            node$add_input_connection(conn, node)
+            node$add_input_connection(conn)
           }
         }
       }
@@ -199,8 +200,8 @@ Layer <- R6Class(
         if (node$node_type != LAYER_TYPE_INPUT) {
           throw("Attempting to load an input into a non-input node")
         }
-        if (is.numeric(inputs[i])) {
-          node$set_value(inputs[i])
+        if (is.numeric(inputs[[i]])) {
+          node$set_value(inputs[[i]])
         }
         else {
           throw("Invalid value. Must be numeric.")
@@ -219,7 +220,7 @@ Layer <- R6Class(
       }
       for (i in 1:length(self$total_nodes())) {
         node <- self$nodes[[i]]
-        if (is.numeric(targets[i])) {
+        if (is.numeric(targets[[i]])) {
           node$set_value(targets[i])
         }
         else {

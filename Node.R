@@ -103,16 +103,18 @@ ProtoNode <- R6Class(
     },
     ## Computes the error function
     error_func = function(value) {
-      if(node$error_funct_ == 'linear-derivative'){
+      if(self$error_funct_ == 'linear_derivative'){
         return(self$error_func_l(value))
       }
-      else if(node$error_funct_ == 'tanh-derivative'){
+      else if(self$error_funct_ == 'tanh_derivative'){
         return(self$error_func_t(value))
       }
-      else if(node$error_funct_ == 'sigmoid-derivative'){
+      else if(self$error_funct_ == 'sigmoid_derivative'){
         return(self$error_func_s(value))
       }
-      self$error_func_(value)
+      else {
+        throw("Wrong error function supplied.")
+      }
       invisible(self)
     },
     ## This function assigns a random value to the input connections.
@@ -188,35 +190,35 @@ Node <- R6Class(
     ## ACTIfVATION_LINEAR. When specifying the activation type, the
     ## corresponding derivative type for the error functions are assigned as
     ## well.
-    set_activation_type = function(node, this_activation_type) {
+    set_activation_type = function(this_activation_type) {
       ## Check this one this may be wrong
       if (this_activation_type == ACTIVATION_SIGMOID) {
-        node$activate_ <- 'sigmoid'
+        self$activate_ <- 'sigmoid'
       }
       else if (this_activation_type == ACTIVATION_TANH) {
-        node$activate_ <- 'tanh'
+        self$activate_ <- 'tanh'
       }
       else if (this_activation_type == ACTIVATION_LINEAR) {
-        node$activate_ <- 'linear'
+        self$activate_ <- 'linear'
       }
       else{
         throw("Invalid Activation Type.")
       }
       
-      self$set_error_func_(node, this_activation_type)
-      node$activation_type_ <- this_activation_type
+      self$set_error_func_(this_activation_type)
+      self$activation_type_ <- this_activation_type
       invisible(self)
     },
     ## Sets error function type to be used
-    set_error_func_ = function(node, activation_type) {
+    set_error_func_ = function(activation_type) {
       if (activation_type == ACTIVATION_SIGMOID) {
-        node$error_funct_ = 'sigmoid_derivative'
+        self$error_funct_ = 'sigmoid_derivative'
       }
       else if (activation_type == ACTIVATION_TANH) {
-        node$error_funct_ = 'tanh_derivative'
+        self$error_funct_ = 'tanh_derivative'
       }
       else if (activation_type == ACTIVATION_LINEAR) {
-        node$error_funct_ = 'linear_derivative'
+        self$error_funct_ = 'linear_derivative'
       }
       else{
         throw("Invalid Activation Type.")
@@ -253,9 +255,9 @@ Node <- R6Class(
     ## The reason that there is a specific function rather than using just an
     ## append is to avoid accidentally adding an input connection to a bias
     ## node.
-    add_input_connection = function(conn, node) {
-      if (identical(conn$upper_node, node)) {
-        node$input_connections <- append(node$input_connections, conn)
+    add_input_connection = function(conn) {
+      if (identical(conn$upper_node, self)) {
+        self$input_connections <- append(self$input_connections, conn)
       }
       else{
         throw("The upper node is always the current node.")
@@ -266,12 +268,12 @@ Node <- R6Class(
     ## process, taking into account the node error.  The learnrate moderates
     ## the degree of change applied to the weight from the errors.
     adjust_weights = function(learn_rate, halt_on_extremes) {
-      for (conn in self$inputconnections) {
+      for (conn in self$input_connections) {
         conn$add_weight(self$adjust_weight_(learn_rate,
                                             conn$lower_node$activate(),
-                                            node$error))
+                                            self$error))
         conn$weight_adjusted <- TRUE
-        weight <- conn$get_weight
+        weight <- conn$get_weight()
         if (halt_on_extremes) {
           if (is.nan(weight)) {
             throw("Weight term has become NaN.")
@@ -286,7 +288,7 @@ Node <- R6Class(
     ## It then multiplies those altogether, which is an adjustment to the
     ## weight of the connection as a result of the error.
     adjust_weight_ = function(learn_rate, activation_value, error) {
-      learn_rate * activation_value * error
+      return(learn_rate * activation_value * error)
     }
   )
 )
@@ -334,9 +336,9 @@ CopyNode <-
         else{
           throw("Invalid Source Type.")
         }
-        
-        copy$value_ <-
-          copy$value_ * self$existing_weight_ + value * self$incoming_weight_
+
+        self$value_ <-
+          self$value_ * self$existing_weight_ + value * self$incoming_weight_
       },
       ## gets the type of source value to use
       get_source_type = function() {
@@ -364,6 +366,7 @@ CopyNode <-
       source_update_config = function(source_type,
                                       incoming_weight,
                                       existing_weight) {
+        
         if (source_type %in% c('a', 'v')) {
           self$source_type_ = source_type
         }
@@ -436,12 +439,14 @@ Connection <- R6Class(
     lower_node = NULL,
     upper_node = NULL,
     weight_ = NULL,
+    weight_adjusted = NULL,
     
     initialize = function(lower_node, upper_node, weight = 0) {
       ## assign all necessary constants
       self$lower_node <- lower_node
       self$upper_node <- upper_node
       self$weight_ <- NULL
+      self$weight_adjusted <- NULL
       self$set_weight(weight)
     },
     ## This function sets the weight of the connection, which relates to

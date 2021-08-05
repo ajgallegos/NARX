@@ -3,82 +3,6 @@ library(R.oo)
 
 library(iterators)
 
-Recurrent <- R6Class(classname = "Recurrent", list(
-  public = list(
-    ## Create initializion class for necessary variables
-    sourceType = NULL,
-    activationType = NULL,
-    incomingWeight = NULL,
-    existing_weight = NULL,
-    connectionType = NULL,
-    copyLevels = NULL,
-    copyNodesLayer = NULL,
-    connectNodesLayer = NULL,
-    
-    initialize = function(){
-      self$sourceType <- "a"
-      self$activationType <- ACTIVATION_LINEAR
-      self$incomingWeight <- 1
-      self$existing_weight <- 0
-      self$connectionType <- "m"
-      self$copyLevels <- 1
-      self$copyNodesLayer <- 0
-      self$connectNodesLayer <- 1
-    },
-    
-    applyConfig = function(neural_net) {
-      if (!neural_net$isNueralNet) {
-        throw("neural net must be of NeuralNet class")
-      }
-      
-      for (snode in self$getSourceNodes(neuralNet)) {
-        prevCopyNode <- None
-        for (level in c(1:self$copyLevels())) {
-          copyNode <- self$CopyNode()
-          if (level == 0) {
-            copyNode$set_source_node(snode)
-          } else{
-            copyNode$set_source_node(prev_copy_node)
-          }
-          copyNode$source_update_config(self$sourceType,
-                                        self$incomingWeight,
-                                        self$existingWeight)
-          if (self$connectionType == "m") {
-            self$fullyConnect(copyNode, self$getUppernodes(neuralNet))
-          } else if (self$connectionType == "s") {
-            self$fullyConnect(copyNode, self$geUpperNodes(neuralNet))
-          } else{
-            throw("Invalid Connection Type")
-          }
-          neuralNet$layers[self$copyNodesLayer]$addNode(copyNode)
-          prevCopyNode <- copyNode
-        }
-      }
-    },
-    
-    fullyConnect = function(lowerNode, upperNodes) {
-      for (upperNode in upperNodes) {
-        upperNode$add_input_connection(Connection(lowerNode, upperNode))
-      }
-    },
-    
-    getSourceNodes = function(neuralNet) {
-      return(neuralNet)
-    },
-    
-    getUpperNodes = function(neuralNet) {
-      layer <- neuralNet$layers[self$connectNodesLayer]
-      retval <- numeric()
-      for (node in layer$nodes) {
-        if (node$node_type != NODE_BIAS) {
-          retval <- append(retval, node)
-        }
-      }
-      return(retval)
-    }
-  )
-))
-
 NeuralNet <- R6Class(classname = "NeuralNet", 
   ## Declare fields
   ## Start all as private, maybe move to public later
@@ -108,7 +32,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       self$learnrate <- .1
       self$randomConstraint <- 1
       self$epochs <- 1
-      self$layers <- numeric()
+      self$layers <- list()
       self$dataRange <-
         list(
           "Learning" = list(NULL, NULL),
@@ -127,9 +51,9 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       self$mse <- numeric()
       
       # holds accumulated mse for each epoch tested
-      self$mseAccum <- numeric()
-      self$validationTargetsActivations <- numeric()
-      self$testTargetsActivations <- numeric()
+      self$mseAccum <- list()
+      self$validationTargetsActivations <- list()
+      self$testTargetsActivations <- list()
       
       self$haltOnExtremes <- FALSE
       
@@ -170,7 +94,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       
       if(!is.null(recurrentMods)){
         for (recurrentMod in recurrentMods) {
-          recurrentMod$apply_config()
+          recurrentMod$apply_config(self)
         }
       }
     },
@@ -292,10 +216,10 @@ NeuralNet <- R6Class(classname = "NeuralNet",
             inputs <- self$allInputs[start:i + 1]
           } else {
             inputs <- self$allInputs[[i]]
+            
           }
-          
           targets <- self$allTargets[[i]]
-          yield[[counter]] <- c(inputs, targets) ## Yield function in R
+          yield[[counter]] <- list(inputs, targets) ## Yield function in R
           counter <- counter + 1
   
         }
@@ -316,19 +240,23 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       endPosition <- self$dataRange["Learning"][2]
       self$checkPositions(startPosition, endPosition)
       yield <- numeric()
-      for (inputsAndTargets in self$getData(startPosition, endPosition)) {
+      for (inputsAndTargets in self$get_data(startPosition, endPosition)) {
         yield <- append(yield, c(inputsAndTargets[1], inputsAndTargets[2]))
       }
       return(yield)
     },
     
     get_test_data = function() {
-      startPosition <- self$dataRange["Test"][1]
-      endPosition <- self$dataRange["Learning"][2]
-      self$checkPositions(startPosition, endPosition)
-      yield <- numeric()
-      for (inputsAndTargets in self$getData(startPosition, endPosition)) {
-        yield <- append(yield, c(inputsAndTargets[1], inputsAndTargets[2]))
+      startPosition <- self$dataRange[["Test"]][[1]]
+      endPosition <- self$dataRange[["Test"]][[2]]
+      self$check_positions(startPosition, endPosition)
+      yield <- list()
+      index <- 1
+      for (inputsAndTargets in self$get_data(startPosition, endPosition)) {
+        if(!is.null(inputsAndTargets[[1]])){
+          yield[[index]] <-list(inputsAndTargets[[1]], inputsAndTargets[[2]])
+          index <- index + 1
+        }
       }
       return(yield)
     },
@@ -346,14 +274,14 @@ NeuralNet <- R6Class(classname = "NeuralNet",
           start <- i - timeDelay
           inputs <- list()
           for (input in self$allInputs[start:(i + 1)]) {
-            inputs <- append(inputs, input[1])
+            inputs[[i]] <-input[[1]]
           }
         } 
         else{
           inputs <- self$allInputs[[i]]
         }
         targets <- self$allTargets[[i]]
-        yield[[i]] <- c(inputs, targets)
+        yield[[i]] <- list(inputs, targets)
         i <- i + 1
       }
       return(yield)
@@ -366,16 +294,16 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     check_positions = function(startPosition, endPosition) {
-      if (startPosition.isNull) {
+      if (is.null(startPosition)) {
         throw("Start Position is not defined")
       }
-      if (endPosition.isNull) {
+      if (is.null(endPosition)) {
         throw("End Position is not defined")
       }
       if (startPosition > endPosition) {
         throw("Start Position cannot be greater than End Position")
       }
-      self$checkTimeDelay(startPosition)
+      self$check_time_delay(startPosition)
     },
     
     set_validation_range = function(startPosition, endPosition) {
@@ -424,11 +352,11 @@ NeuralNet <- R6Class(classname = "NeuralNet",
         self$set_epochs(epochs = epochs)
       }
       self$mseAccum = list()
-      for (epoch in 1:self$epochs) {
+      for (epoch in 1:self$epochs) { 
         summedErrors <- 0
         count <- 0
         for (inputsAndTargets in self$get_learn_data(randomTesting)) {
-          self$process_sample(inputsAndTargets[1], inputsAndTargets[2], learn = TRUE)
+          self$process_sample(inputsAndTargets[[1]], inputsAndTargets[[2]], TRUE)
           summedErrors <- summedErrors + self$calc_sample_error()
           count <- count + 1
           
@@ -440,6 +368,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
             }
           }
         }
+        print(summedErrors)
         mse <- self$calcMse(summedErrors, count)
         if (showEpochResults) {
           print(paste("epoch: ", epoch, " MSE: ", mse))
@@ -459,22 +388,30 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     evaluate = function(evalType, showSampleInterval) {
       if (evalType == "T") {
         evalList <- self$testTargetsActivations
-        getData <- self$get_test_data()
-      } else if (evalType == "T") {
+        getData <- self$get_test_data
+      } else if (evalType == "V") {
         evalList <- self$validationTargetsActivations
-        getData <- self$get_test_data()
+        getData <- self$get_validation_data
       }
       summedErrors <- 0
       count <- 0
+      index <- 1
       for (inputsAndTargets in getData()) {
-        self$process_sample(inputsAndTargets[1], inputsAndTargets[2], learn = FALSE)
-        summedErrors <- summedErrors + self$calc_samplerror()
-        evalList <-
-          append(evalList,
-                 numeric(inputsAndTargets[2], self$outputLayer$activations()))
-        if (showSampleInterval > 0) {
-          if (count %% showSampleInterval == 0) {
-            print(paste("sample: ", count, " errors: ", summedErrors))
+        if(!is.null(inputsAndTargets[[1]])){
+          self$process_sample(inputsAndTargets[[1]], inputsAndTargets[[2]], learn = FALSE)
+          summedErrors <- summedErrors + self$calc_sample_error()
+          if(evalType == "T"){
+            self$testTargetsActivations[[index]] <- list(inputsAndTargets[[2]], self$outputLayer$activations())
+          } 
+          else if(evalType == "V"){
+            self$validationTargetsActivations[[index]] <- list(inputsAndTargets[[2]], self$outputLayer$activations())
+          }
+          index <- index + 1
+          count <- count + 1
+          if (showSampleInterval > 0) {
+            if (count %% showSampleInterval == 0) {
+              print(paste("sample: ", count, " errors: ", summedErrors))
+            }
           }
         }
       }
@@ -492,17 +429,20 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     
     process_sample = function(inputs, targets, learn = FALSE) {
       self$inputLayer$load_inputs(inputs)
-      if (targets) {
+      if (length(targets) != 0) {
         self$outputLayer$load_targets(targets)
       }
+      
       self$feedForward()
-      if (!is.null(targets) && !is.null(learn)) {
+      
+      if (length(targets) != 0 && learn == TRUE) {
         self$back_propagate()
       } 
-      else if (!is.null(targets)) {
-        self$update_error(toponly = TRUE)
+      else if (length(targets) != 0) {
+        self$update_error(TRUE)
       }
       self$copy_levels()
+      invisible(self)
     },
     
     feedForward = function() {
@@ -512,7 +452,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     back_propagate = function() {
-      self$update_error(toponly = FALSE)
+      self$update_error(FALSE)
       self$adjust_weights()
     },
     
@@ -520,14 +460,16 @@ NeuralNet <- R6Class(classname = "NeuralNet",
       if (toponly == FALSE) {
         self$zero_errors()
       }
+      
       if (toponly == TRUE) {
         self$outputLayer$update_error(self$get_halt_on_extremes())
       } 
       else{
-        for (layerNo in length(self$layers)) {
+        for (layerNo in length(self$layers):1) {
           self$layers[[layerNo]]$update_error(self$get_halt_on_extremes())
         }
       }
+      invisible(self)
     },
     
     zero_errors = function() {
@@ -550,7 +492,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     calc_sample_error = function() {
       total <- 0
       for (node in self$outputLayer$nodes) {
-        total <- total + (node$error ** 2)
+        total <- total + (node$error ^ 2)
       }
       return(total)
     },
