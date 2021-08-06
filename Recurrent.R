@@ -12,6 +12,8 @@ Recurrent <- R6Class(
     connectNodesLayer = NULL,
     
     initialize = function() {
+      # This is the base class for recurrent modifications.  It is not intended to
+      # be used directly.
       self$sourceType <- "a"
       self$activationType <- ACTIVATION_LINEAR
       self$incomingWeight <- 1
@@ -23,6 +25,10 @@ Recurrent <- R6Class(
     },
     
     applyConfig = function(neural_net) {
+      # This function modifies the neural net that is passed in by taking the
+      # parameters that have been set in this class.  By having _apply_config,
+      # subclassed versions of apply_config can take multiple passes with less
+      # code. This function actually does the work.
       if (!neural_net$isNeuralNet) {
         throw("neural net must be of NeuralNet class")
       }
@@ -57,6 +63,10 @@ Recurrent <- R6Class(
     },
     
     fullyConnect = function(lowerNode, upperNodes) {
+      # This function creates connections to each of the upper nodes.
+      # 
+      # This is a separate function from the one in layers, because using this
+      # version does not require ALL of the nodes on a layer to be used.
       for (upperNode in upperNodes) {
         upperNode$add_input_connection(Connection$new(lowerNode, upperNode))
       }
@@ -89,6 +99,12 @@ NARXRecurrent <-
       node_type_ = NULL,
       output_values = NULL,
       input_values = NULL,
+      # This function takes:
+      #   the output order, or number of copy levels of
+      # output values,
+      # the weight to apply to the incoming values from output nodes,
+      # the input order, or number of copy levels of input values,
+      # the weight to apply to the incoming values from input nodes
       
       initialize = function(output_order,
                             incoming_weight_from_output,
@@ -106,6 +122,8 @@ NARXRecurrent <-
       },
       
       get_source_nodes = function(neural_net) {
+        # This function returns either the output nodes or input nodes depending
+        # upon self._node_type.
         if (self$node_type_ == NODE_OUTPUT) {
           len <- length(neural_net$layers)
           return(neural_net$layers[[len]]$get_nodes(self$node_type_))
@@ -116,6 +134,8 @@ NARXRecurrent <-
       },
       
       apply_config = function(neural_net) {
+        # This function first applies any parameters related to the output nodes
+        # and then any with the input nodes.
         if (self$output_values[1] > 0) {
           self$node_type_ <- NODE_OUTPUT
           self$copy_levels <- self$output_values[1]

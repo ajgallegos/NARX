@@ -8,6 +8,8 @@ NeuralNet <- R6Class(classname = "NeuralNet",
   ## Start all as private, maybe move to public later
   public = list(
     ##initialize variables
+    # Because there are a number of parameters to specify, there are
+    # no specific variables that are initialized within this.
     isNeuralNet = NULL,
     learnrate = NULL,
     randomConstraint = NULL,
@@ -65,6 +67,29 @@ NeuralNet <- R6Class(classname = "NeuralNet",
                            totalHiddenNodesList,
                            outputNodes,
                            recurrentMods = NULL) {
+      # This function initializes the layers.
+      # The variables:
+      #   
+      #   * input_nodes: the number of nodes in the input layer
+      # * total_hidden_nodes_list:  a list of numbers of nodes in the
+      # hidden layer.  For example, [5, 3]
+      # * output_nodes: the number of nodes in the output layer
+      # 
+      # The initial network is created, and then a series of modifications can
+      # be made to enable recurrent features.  recurrent_mods are
+      # configurations for modifications to the neural network that is created
+      # within init_layers.
+      # 
+      # For example, if
+      # init_layers(input_nodes, total_hidden_nodes_list, output_nodes,
+      #             ElmanSimpleRecurrent())
+      # was used, then the initial network structure of input, hidden, and
+      # output nodes would be created.  After that, the additional copy or
+      # context nodes that would automatically transfer values from the lowest
+      # hidden layer would be added to the input layer.
+      # 
+      # More than one recurrent scheme can be applied, each one adding to the
+      # existing network.
       ## Input layer
       self$layers <- list()
       layer <- Layer$new(length(self$layers), NODE_INPUT)
@@ -100,6 +125,13 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     set_halt_on_extremes = function(halt) {
+      # This function sets the flag as to whether the program should halt when
+      # experiencing extremely positive or negative numbers.  This can happen
+      # when using linear functions and data that may not be normalized.  Such
+      # things as nan and inf can be experienced otherwise.  Not halting
+      # instead, simply scales back the values to LARGEVALUE_LIMIT and
+      # NEGVALUE_LIMIT. A satisfactory output from the network may be in doubt,
+      # but at least it gives it the possibility.
       if (!(is(halt, "logical"))) {
         throw("Halt must be a True or False, Halt: ", halt)
       }
@@ -109,10 +141,14 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     get_halt_on_extremes = function() {
+      # This function returns the True/False flag for halting on extremes.
       return(self$haltOnExtremes)
     },
     
     set_random_constraint = function(constraint) {
+      # This fuction sets a value between 0 and 1 for limiting the random
+      # weights upon initialization.  For example, .8 would limit weights to
+      # -.8 through .8.
       if (!(is(constraint, "numeric")) | !between(constraint, 0, 1)) {
         throw("The constraint must be a float between 0.0 and 1.0, constraint: ",
               constraint)
@@ -123,10 +159,14 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     get_random_constraint = function() {
+      # This function gets the random constraint used in weights
+      # initialization.s
       return(self$randomConstraint)
     },
     
     set_epochs = function(epochs) {
+      # This function sets the number of epochs or cycles through the learning
+      # data.
       if (!(is(epochs, "numeric")) | (epochs <= 0)) {
         throw("The epochs must be an numeric, epochs: ", epochs)
       }
@@ -136,10 +176,15 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     get_epochs = function() {
+      # This function gets the number of epochs that will run during learning.
       return(self$randomConstraint)
     },
     
     set_time_delay = function(timeDelay) {
+      # This function sets a value for time delayed data.  For example, is the
+      # time delay was 5, then input values would be taken 5 at a time.  Upon
+      # the next increment the next input values would be 5, with 4 of the
+      # previous values included, and one new value.
       if (!is(timeDelay, "numeric") | timeDelay < 0) {
         throw("Time delay must be an numeric greater than or equal to zero, time delay: ",
               timeDelay)
@@ -150,18 +195,24 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     get_time_delay = function() {
+      # This function gets the time delay to be used with timeseries data.
       return(self$timeDelay)
     },
     
     set_all_targets = function(allTargets) {
+      # This function sets the targets.
       self$allTargets <- allTargets
     },
     
     set_all_inputs = function(allInputs) {
+      # This function sets the inputs.  Inputs are basically treated as a
+      # list.
       self$allInputs <- allInputs
     },
     
     set_learnrate = function(learnrate) {
+      # This function sets the learn rate for the modeling.  It is used to
+      # determine how much weight to associate with an error when learning.
       if (!is(learnrate, "numeric") | !between(learnrate, 0, 1)) {
         throw("Learnrate must be a numeric between 0.0 and 1.0, learnrate: ",
               learnrate)
@@ -172,10 +223,13 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     get_learnrate = function() {
+      # This function gets the learn rate for the modeling.  It is used to
+      # determine how much weight to associate with an error when learning.
       return(self$learnrate)
     },
     
     set_data_range = function(dataType, startPosition, endPosition) {
+      # This function sets the data positions by type
       if (!(is(startPosition, "numeric")) |
           !(is(endPosition, "numeric"))) {
         throw("start and end position must be an numeric")
@@ -185,6 +239,8 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     set_learn_range = function(startPosition, endPosition) {
+      # This function sets the range within the data that is to used for
+      # learning.
       self$set_data_range(
         dataType = "Learning",
         startPosition = startPosition,
@@ -194,16 +250,24 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     get_learn_range = function() {
+      # This function gets the range within the data that is to used for
+      # learning.
       return(self$dataRange["Learning"])
     },
     
     check_time_delay = function(position) {
+      # This function checks the position or index of the data and determines
+      # whether the position is consistent with the time delay that has been
+      # set.
       if (position - self$timeDelay < 0) {
         throw("Invalid start position with time delayed data")
       }
     },
     
     get_learn_data = function(randomTesting = FALSE) {
+      # This function is a generator for learning data.  It is assumed that in
+      # many cases, this function will be over-written with a situation
+      # specific function.
       startPosition <- self$dataRange["Learning"][[1]][[1]]
       endPosition <- self$dataRange["Learning"][[1]][[2]]
       yield <- list()
@@ -236,6 +300,9 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     get_validation_data = function() {
+      # This function is a generator for validation data.  It is assumed that
+      # in many cases, this function will be over-written with a situation
+      # specific function.
       startPosition <- self$dataRange["Validation"][1]
       endPosition <- self$dataRange["Learning"][2]
       self$checkPositions(startPosition, endPosition)
@@ -247,6 +314,9 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     get_test_data = function() {
+      # This function is a generator for testing data.  It is assumed that in
+      # many cases, this function will be over-written with a situation
+      # specific function.
       startPosition <- self$dataRange[["Test"]][[1]]
       endPosition <- self$dataRange[["Test"]][[2]]
       self$check_positions(startPosition, endPosition)
@@ -262,6 +332,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     get_data = function(startPosition, endPosition) {
+      # This function gets an input from the list of all inputs.
       i <- startPosition
       if (endPosition > length(self$allInputs)) {
         throw("endPosition is past end of allInputs, endPosition: ",
@@ -288,12 +359,17 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     get_randomized_position = function(startPosition, endPosition) {
+      # This function accepts integers representing a starting and ending
+      # position within a set of data and yields a position number in a random
+      # fashion until all of the positions have been exhausted.
       order = c(startPosition:endPosition)
       randomOrder = sample(order)
       return(randomOrder)
     },
     
     check_positions = function(startPosition, endPosition) {
+      # This function evaluates validates, somewhat, start and end positions
+      # for data ranges.
       if (is.null(startPosition)) {
         throw("Start Position is not defined")
       }
@@ -307,28 +383,51 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     set_validation_range = function(startPosition, endPosition) {
+      # This function sets the start position and ending position for the
+      # validation range.  The first test period is often used to test the
+      # current weights against data that is not within the learning period
+      # after each epoch run.
       self$setDataRange("Validation", startPosition, endPosition)
     },
     
     get_validation_range = function() {
+      # This function gets the start position and ending position for the
+      # validation range.  The first test period is often used to test the
+      # current weights against data that is not within the learning period
+      # after each epoch run.
       return(self$dataRange["Validation"])
     },
     
     set_test_range = function(startPosition, endPosition) {
+      # This function sets the start position and ending position for
+      # the out-of-sample range.
       self$set_data_range("Test", startPosition, endPosition)
     },
     
     get_test_range = function() {
+      # This function gets the start position and ending position for
+      # the out-of-sample range.
       return(self$dataRange["Test"])
     },
     
     initConnections = function() {
+      # Init connections sets up the linkages between layers.
+      # 
+      # This function connects all nodes, which is typically desirable
+      # However, note that by substituting in a different process, a
+      # sparse network can be achieved.  And, there is no restriction
+      # to connecting layers in a non-traditional fashion such as skip-layer
+      # connections.
       for (layer in self$layers[2:length(self$layers)]) {
         self$connectLayer(layer)
       }
     },
     
     connectLayer = function(layer) {
+      # Generates connections to the lower layer.
+      # 
+      # If it is the input layer, then it's skipped
+      #   It could raise an error, but it seems pointless.
       lowerLayerNo <- layer$layer_no 
       if (lowerLayerNo >= 1) {
         lowerLayer <- self$layers[[lowerLayerNo]]
@@ -337,6 +436,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
   },
     
     randomize_network = function() {
+      # This function randomizes the weights in all of the connections.
       for (layer in self$layers) {
         if (layer$layer_type != NODE_INPUT) {
           layer$randomize(self$randomConstraint)
@@ -348,6 +448,24 @@ NeuralNet <- R6Class(classname = "NeuralNet",
                      showEpochResults = TRUE,
                      randomTesting = FALSE,
                      showSampleInterval = 0) {
+      # This function performs the process of feeding into the network inputs
+      # and targets, and computing the feedforward process.  After the
+      # feedforward process runs, the actual values calculated by the output
+      # are compared to the target values.  These errors are then used by the
+      # back propagation process to adjust the weights for the next set of
+      # inputs. If a recurrent netork structure is used, the stack of copy
+      # levels is pushed with the latest set of hidden nodes.
+      # 
+      # Then, the next set of inputs is input.
+      # 
+      # When all of the inputs have been processed, resulting in the
+      # completion of an epoch, if show_epoch_results=True, then the MSE will
+      # be printed.
+      # 
+      # Finally, if random_testing=True, then the inputs will not be processed
+      # sequentially.  Rather, the inputs will be sorted into a random order
+      # and then input.  This is very useful for timeseries data to avoid
+      # autocorrelations.
       if (!is.null(epochs)) {
         self$set_epochs(epochs = epochs)
       }
@@ -378,14 +496,21 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     validate = function(showSampleInterval = 0) {
+      # This function loads and feedforwards the network with validation data.
+      # Optionally, it can also store the actuals as well.
       return(self$evaluate("V", showSampleInterval))
     },
     
     test = function(showSampleInterval = 0) {
+      # This function loads and feedforwards the network with test data.
+      # Optionally, it can also store the actuals as well.
       return(self$evaluate("T", showSampleInterval))
     },
     
     evaluate = function(evalType, showSampleInterval) {
+      # This function loads and feedforwards the network with data.
+      # eval_type is either validation or test data ('t' or 'v')
+      # Optionally, it can also store the actuals as well.
       if (evalType == "T") {
         evalList <- self$testTargetsActivations
         getData <- self$get_test_data
@@ -420,6 +545,7 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     calcMse = function(totalSummedErrors, count) {
+      # This function calculates mean squared errors.
       mse <- (totalSummedErrors / count) / 2
       if (!is.numeric(mse)) {
         throw("Mean Squared Error is not a number")
@@ -428,6 +554,11 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     process_sample = function(inputs, targets, learn = FALSE) {
+      # Accepts inputs and targets, then forward and back propagations.  A
+      # comparison is then made of the generated output with the target values.
+      # 
+      # Note that this is for an incremental learn, not the full set of inputs
+      # and examples.
       self$inputLayer$load_inputs(inputs)
       if (length(targets) != 0) {
         self$outputLayer$load_targets(targets)
@@ -446,17 +577,33 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     feedForward = function() {
+      # This function starts with the first hidden layer and
+      # gathers the values from the lower layer, applies the
+      # connection weightings to those values, and activates the
+      # nodes.  Then, the next layer up is selected and the process
+      # is repeated; resulting in output values in the upper-most
+      # layer.
       for (layer in self$layers[2:length(self$layers)]) {
         layer$feed_forward()
       }
     },
     
     back_propagate = function() {
+      # Backpropagate the error through the network. Aside from the
+      # initial compution of error at the output layer, the process takes the
+      # top hidden layer, looks at the output connections reaching up to the
+      # next layer, and carries the results down through each layer back to the
+      # input layer.
       self$update_error(FALSE)
       self$adjust_weights()
     },
     
     update_error = function(toponly) {
+      # This function goes through layers starting with the top hidden layer
+      # and working its way down to the input layer.
+      # 
+      # At each layer, the errors are updated in the nodes from the errors and
+      # weights in connections to nodes in the upper layer.
       if (toponly == FALSE) {
         self$zero_errors()
       }
@@ -473,6 +620,8 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     zero_errors = function() {
+      # This function sets the node errors to zero in preparation for back
+      # propagation.
       for (layer in self$layers) {
         for (node in layer$nodes) {
           node$error <- 0
@@ -481,6 +630,10 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     adjust_weights = function() {
+      # This function goes through layers starting with the top hidden layer
+      # and working its way down to the input layer.
+      # 
+      # At each layer, the weights are adjusted based upon the errors.
       loop <- c(1:length(self$layers))
       backLoop <- rev(loop) ## To loop backwards through the layer
       for (layerNo in backLoop) {
@@ -490,6 +643,8 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     calc_sample_error = function() {
+      # The mean squared error (MSE) is a measure of how well the outputs
+      # compared to the target values.
       total <- 0
       for (node in self$outputLayer$nodes) {
         total <- total + (node$error ^ 2)
@@ -498,6 +653,12 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     copy_levels = function() {
+      # This function advances the copy node values, transferring the values
+      # from the source node to the copy node.  In order to avoid stomping on
+      # the values that are to be copies, it goes from highest node number to
+      # lowest.
+      # 
+      # No provision is made at this point to exhaustively check precedence.
       for (layer in self$layers) {
         loop = c(1:layer$total_nodes())
         backLoop <- rev(loop) ## To loop backwards through the nodes
@@ -512,6 +673,23 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     output_values = function() {
+      # This function outputs the values of the network.  It is meant to be
+      # sufficiently complete that, once saved to a file, it could be loaded
+      # back from that file completely to function.
+      # 
+      # To accommodate configparser, which is used as the file format, there is
+      # a form of [category],
+      # label = value
+      # 
+      # Since there are also no sub-categories possible, so the naming
+      # structure is designed to take that into account. This accommodation
+      # also leads to a couple design choices: Each layer is given a separate
+      # category and a list of nodes follows.  Then each node has a separate
+      # category identifying it by layer number and node number.  This can't be
+      #   inferred from just knowing the number of nodes in the layer and
+      #   sequentially reading, because if a sparse network is used, then the
+      #   node numbers may be out of sync with the position of the node within of
+      #   the layer.
       output <-
         paste(
           "[net]\n",
@@ -585,11 +763,13 @@ NeuralNet <- R6Class(classname = "NeuralNet",
     },
     
     node_id = function(node) {
+      # This function receives a node, and returns an text based id that
+      # uniquely identifies it within the network.
       return(paste("node-", node$layer$layer_no, ":", node$node_no))
     },
     
     save = function(filename) {
-      ## ASK Alex if this is the best way
+      # This function saves the network structure to a file.
       sink(filename)
       cat(self$outputValues())
       sink()
